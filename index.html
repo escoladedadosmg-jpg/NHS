@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Analítico - RNC</title>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- DataLabels Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <!-- SheetJS for Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Roboto:wght@400;700&family=Montserrat:wght@400;700&family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root[data-theme="light"] {
+            --bg-color: #f4f7f6;
+            --container-bg: #ffffff;
+            --header-bg: #ffffff;
+            --primary-blue: #0056b3; 
+            --secondary-blue: #00a8ff;
+            --text-main: #333333;
+            --text-muted: #666666;
+            --border-color: #e0e0e0;
+            --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            --grid-line: rgba(0,0,0,0.05);
+            
+            --chart-c1: #0056b3; 
+            --chart-c2: #00a8ff; 
+            --chart-c3: #4caf50; 
+            --chart-c4: #ffb300; 
+            --chart-c5: #e53935; 
+            --chart-c6: #8e44ad; 
+            
+            --marrom-recup: #8D6E63;
+            --vermelho-rnc: #e53935;
+        }
+
+        :root[data-theme="dark"] {
+            --bg-color: #0b0c10;
+            --container-bg: #1f2833;
+            --header-bg: #1f2833;
+            --primary-blue: #00f3ff; 
+            --secondary-blue: #0088cc;
+            --text-main: #ffffff;
+            --text-muted: #c5c6c7;
+            --border-color: #334254;
+            --card-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            --grid-line: rgba(255,255,255,0.05);
+
+            --chart-c1: #00f3ff;
+            --chart-c2: #ffffff;
+            --chart-c3: #00ff88;
+            --chart-c4: #f1c40f;
+            --chart-c5: #e74c3c;
+            --chart-c6: #b52b65;
+            
+            --marrom-recup: #BCAAA4;
+            --vermelho-rnc: #ef5350;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; transition: background-color 0.3s, color 0.3s; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding: 20px; font-family: 'Inter', sans-serif; }
+        
+        .dashboard-container { width: 100%; max-width: 1920px; aspect-ratio: 16/9; margin: 0 auto; display: flex; flex-direction: column; background-color: var(--bg-color); }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background: var(--header-bg); border-bottom: 3px solid var(--primary-blue); border-radius: 10px 10px 0 0; box-shadow: var(--card-shadow); }
+        .logo-container { display: flex; align-items: center; gap: 15px; }
+        .logo-img { height: 50px; object-fit: contain; }
+        
+        /* Título do Dashboard Editável */
+        .dash-title { border-left: 2px solid var(--border-color); padding-left: 15px; margin-left: 5px; outline: none; cursor: text; transition: 0.2s; border-bottom: 1px solid transparent; }
+        .dash-title:focus { border-bottom: 1px dashed var(--primary-blue); background: rgba(0,0,0,0.02); }
+        
+        .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .btn-custom { background: var(--primary-blue); color: #fff; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: 600; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s; display: inline-flex; align-items: center; gap: 5px; font-family: 'Inter', sans-serif; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn-custom:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        .upload-wrapper { position: relative; overflow: hidden; display: inline-block; }
+        .upload-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; height: 100%; }
+
+        select, input[type=number], input[type=color] { background: var(--container-bg); color: var(--text-main); border: 1px solid var(--border-color); padding: 8px 10px; border-radius: 5px; outline: none; font-weight: 600; font-family: 'Inter', sans-serif; }
+        
+        .tabs { display: flex; background: var(--header-bg); padding: 15px 30px 0; gap: 10px; border-bottom: 1px solid var(--border-color); }
+        .tab { padding: 10px 20px; background: var(--bg-color); border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; color: var(--text-muted); border: 1px solid transparent; border-bottom: none; opacity: 0.7; }
+        .tab:hover { opacity: 1; color: var(--primary-blue); }
+        .tab.active { background: var(--container-bg); color: var(--primary-blue); border: 1px solid var(--border-color); border-bottom: 2px solid var(--container-bg); opacity: 1; margin-bottom: -1px; box-shadow: 0 -2px 5px rgba(0,0,0,0.02); }
+        
+        .content-area { flex: 1; padding: 20px; background: var(--container-bg); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 10px 10px; position: relative; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--card-shadow); }
+        .tab-content { display: none; height: 100%; grid-template-columns: repeat(12, 1fr); grid-auto-rows: 1fr; gap: 20px; overflow-y: auto; }
+        .tab-content.active { display: grid; }
+        
+        .card { background: var(--container-bg); border-radius: 8px; padding: 15px; border: 1px solid var(--border-color); border-left: 5px solid var(--primary-blue); box-shadow: var(--card-shadow); display: flex; flex-direction: column; }
+        
+        /* Cabeçalhos Editáveis */
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-color); margin-bottom: 15px; padding-bottom: 5px; }
+        .card-header h3 { font-size: 14px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; outline: none; flex: 1; cursor: text; transition: 0.2s; border-bottom: 1px solid transparent; }
+        .card-header h3:focus { border-bottom: 1px dashed var(--primary-blue); color: var(--primary-blue); background: rgba(0,0,0,0.02); }
+        .card-header h3:hover { color: var(--primary-blue); }
+        
+        .color-picker { width: 22px; height: 22px; padding: 0; border: none; border-radius: 4px; cursor: pointer; background: transparent; opacity: 0.2; transition: 0.3s; margin-left: 10px; }
+        .color-picker:hover { opacity: 1; transform: scale(1.1); }
+
+        .chart-container { position: relative; flex: 1; min-height: 0; }
+        
+        /* Grid KPIs */
+        #tab1 .kpi-row { grid-column: span 12; display: flex; gap: 20px; height: 110px; }
+        .kpi { flex: 1; background: var(--container-bg); border-radius: 8px; border: 1px solid var(--border-color); padding: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; box-shadow: var(--card-shadow); }
+        .kpi span { font-size: 13px; color: var(--text-muted); text-transform: uppercase; font-weight: bold; outline: none; cursor: text; border-bottom: 1px solid transparent; transition: 0.2s; }
+        .kpi span:focus { border-bottom: 1px dashed var(--primary-blue); color: var(--primary-blue); background: rgba(0,0,0,0.02); }
+        .kpi strong { font-size: 32px; color: var(--primary-blue); margin-top: 5px; }
+        
+        /* Layout dos Gráficos */
+        #tab1 .card-rnc { grid-column: span 4; grid-row: span 2; }
+        #tab1 .card-line-rnc { grid-column: span 8; grid-row: span 2; }
+        #tab1 .card-horas { grid-column: span 12; grid-row: span 3; }
+        
+        #tab2 .card-pecas { grid-column: span 8; grid-row: span 4; }
+        #tab2 .card-local { grid-column: span 4; grid-row: span 2; }
+        #tab2 .card-local-bar { grid-column: span 4; grid-row: span 2; }
+        
+        #tab3 .card-maq { grid-column: span 8; grid-row: span 2; }
+        #tab3 .card-corr { grid-column: span 4; grid-row: span 2; }
+        #tab3 .card-mod { grid-column: span 4; grid-row: span 2; }
+        #tab3 .card-serie { grid-column: span 4; grid-row: span 2; }
+        #tab3 .card-lote { grid-column: span 4; grid-row: span 2; }
+        
+        #tab4 .card-pareto-setor { grid-column: span 6; grid-row: span 2; }
+        #tab4 .card-pareto-def { grid-column: span 6; grid-row: span 2; }
+        #tab4 .card-pareto-causa { grid-column: span 6; grid-row: span 2; }
+        #tab4 .card-custo-setor { grid-column: span 6; grid-row: span 2; }
+        
+        /* Modals & Overlays */
+        #loadingOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); color: white; display: none; justify-content: center; align-items: center; font-size: 24px; z-index: 999; border-radius: 0 0 10px 10px; flex-direction: column; }
+        .spinner { border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid var(--primary-blue); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Modal de Configurações Globais */
+        .modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: var(--container-bg); color: var(--text-main); width: 500px; padding: 25px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--border-color); }
+        .modal-content h2 { margin-bottom: 20px; color: var(--primary-blue); font-weight: 800; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .form-group label { font-weight: 600; font-size: 14px; }
+        .form-group select, .form-group input { width: 50%; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
+    </style>
+</head>
+<body>
+
+<div class="dashboard-container">
+    <div class="header">
+        <div class="logo-container">
+            <!-- Logo customizada via imagem externa -->
+            <img src="logo_2.png" alt="NHS Logo" class="logo-img">
+            <h1 id="mainDashTitle" class="dash-title" contenteditable="true" onblur="saveMainTitle()" title="Clique para editar o título">Dashboard Analítico</h1>
+        </div>
+        <div class="controls">
+            <div class="upload-wrapper">
+                <button class="btn-custom">CARREGAR PLANILHA</button>
+                <input type="file" id="excelUpload" accept=".xlsx, .xls" title="Carregar nova planilha" />
+            </div>
+            <button class="btn-custom" onclick="openSettingsModal()" title="Personalizar Título e Rótulos">CONFIGURAÇÕES</button>
+            <button class="btn-custom" onclick="toggleTheme()" title="Alterar esquema de cores">TEMA</button>
+            <button class="btn-custom" onclick="clearData()" style="background:#e53935;" title="Apagar todos os dados e formatações">LIMPAR DADOS</button>
+            <select id="monthFilter" title="Filtrar por Mês">
+                <option value="ALL">Todos os Meses</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="openTab('tab1')">Visão Geral & Custos</div>
+        <div class="tab" onclick="openTab('tab2')">Gestão de Peças</div>
+        <div class="tab" onclick="openTab('tab3')">Equipamentos & Rastreabilidade</div>
+        <div class="tab" onclick="openTab('tab4')">Análise de Qualidade</div>
+    </div>
+    
+    <div class="content-area">
+        <div id="loadingOverlay"><div class="spinner"></div>Processando Dados...</div>
+        
+        <!-- TAB 1 -->
+        <div id="tab1" class="tab-content active">
+            <div class="kpi-row">
+                <div class="kpi"><span id="t_kpi_1" contenteditable="true" onblur="saveTitle(this.id)" title="Editar nome do cartão">Total de RNCs Abertas</span><strong id="kpiRnc" style="color: var(--vermelho-rnc);">0</strong></div>
+                <div class="kpi"><span id="t_kpi_2" contenteditable="true" onblur="saveTitle(this.id)">Volume Apontado</span><strong id="kpiQtd">0</strong></div>
+                <div class="kpi"><span id="t_kpi_3" contenteditable="true" onblur="saveTitle(this.id)">Esforço de Retrabalho</span><strong id="kpiHrs">0h</strong></div>
+                <div class="kpi"><span id="t_kpi_4" contenteditable="true" onblur="saveTitle(this.id)">Impacto Financeiro</span><strong id="kpiCusto">R$ 0</strong></div>
+            </div>
+            
+            <div class="card card-rnc">
+                <div class="card-header">
+                    <h3 id="t_rnc" contenteditable="true" onblur="saveTitle(this.id)" title="Clique para editar">Evolução Mensal de RNCs</h3>
+                    <input type="color" class="color-picker" id="c_rnc" onchange="saveColor(this.id)" title="Cor da barra">
+                </div>
+                <div class="chart-container"><canvas id="chartRnc"></canvas></div>
+            </div>
+            
+            <div class="card card-line-rnc">
+                <div class="card-header">
+                    <h3 id="t_comp" contenteditable="true" onblur="saveTitle(this.id)">Comparativo: RNCs vs Quantidade Apontada (Peças)</h3>
+                    <input type="color" class="color-picker" id="c_comp" onchange="saveColor(this.id)">
+                </div>
+                <div class="chart-container"><canvas id="chartComp"></canvas></div>
+            </div>
+            
+            <div class="card card-horas">
+                <div class="card-header">
+                    <h3 id="t_horas" contenteditable="true" onblur="saveTitle(this.id)">Relação de Horas Gastas e Custo Financeiro</h3>
+                    <input type="color" class="color-picker" id="c_horas" onchange="saveColor(this.id)">
+                </div>
+                <div class="chart-container"><canvas id="chartCustos"></canvas></div>
+            </div>
+        </div>
+        
+        <!-- TAB 2 -->
+        <div id="tab2" class="tab-content">
+            <div class="card card-pecas">
+                <div class="card-header">
+                    <h3 id="t_pecas" contenteditable="true" onblur="saveTitle(this.id)">Composição de Peças: Aprovadas, Recuperadas, Rejeitadas</h3>
+                    <input type="color" class="color-picker" id="c_pecas" onchange="saveColor(this.id)">
+                </div>
+                <div class="chart-container"><canvas id="chartPecas"></canvas></div>
+            </div>
+            <div class="card card-local">
+                <div class="card-header">
+                    <h3 id="t_loc1" contenteditable="true" onblur="saveTitle(this.id)">Local de Retrabalho (Geral)</h3>
+                    <input type="color" class="color-picker" id="c_loc1" onchange="saveColor(this.id)">
+                </div>
+                <div class="chart-container"><canvas id="chartLocal"></canvas></div>
+            </div>
+            <div class="card card-local-bar">
+                <div class="card-header">
+                    <h3 id="t_loc2" contenteditable="true" onblur="saveTitle(this.id)">Tendência: Local de Retrabalho (Mensal)</h3>
+                    <input type="color" class="color-picker" id="c_loc2" onchange="saveColor(this.id)">
+                </div>
+                <div class="chart-container"><canvas id="chartLocalBar"></canvas></div>
+            </div>
+        </div>
+        
+        <!-- TAB 3 -->
+        <div id="tab3" class="tab-content">
+            <div class="card card-maq">
+                <div class="card-header">
+                    <h3 id="t_maq" contenteditable="true" onblur="saveTitle(this.id)">Top Máquinas com Apontamentos</h3>
+                    <input type="color" class="color-picker" id="c_maq" onchange="saveColor(this.id)">
+                </div>
+                <div class="chart-container"><canvas id="chartMaquinas"></canvas></div>
+            </div>
+            <div class="card card-corr">
+                <div class="card-header">
+                    <h3 id="t_corr" contenteditable="true" onblur="saveTitle(this.id)">Status: Corrente x Protótipo</h3>
+                    <input type="color" class="color-picker" id="c_corr" onchange="saveColor(this.id)">
+                </div>
+                <div class="chart-container"><canvas id="chartCorr"></canvas></div>
+            </div>
+            <div class="card card-mod">
+                <div class="card-header">
+                    <h3 id="t_mod" contenteditable="true" onblur="saveTitle(this.id)">Principais Modelos Afetados</h3>
+                    <input type="color" class="color-picker" id="c_mod" onchange="saveColor(this.id)">
+                </div>
+                <div class="chart-container"><canvas id="chartModelos"></canvas></div>
+            </div>
+            <div class="card card-serie">
+                <div class="card-header">
+                    <h3 id="t_ser" contenteditable="true" onblur="saveTitle(this.id)">Rastreabilidade: Séries Únicas x Repetidas</h3>
+                    <input type="color" class="color-picker" id="c_ser" onchange="saveColor(this.id)">
+                </div>
+                <div class="chart-container"><canvas id="chartSerie"></canvas></div>
+            </div>
+            <div class="card card-lote">
+                <div class="card-header">
+                    <h3 id="t_lote" contenteditable="true" onblur="saveTitle(this.id)">Concentração por Lotes (Top 5)</h3>
+                    <input type="color" class="color-picker" id="c_lote" onchange="saveColor(this.id)">
+                </div>
+                <div class="chart-container"><canvas id="chartLote"></canvas></div>
+            </div>
+        </div>
+        
+        <!-- TAB 4 -->
+        <div id="tab4" class="tab-content">
+            <div class="card card-pareto-setor">
+                <div class="card-header">
+                    <h3 id="t_p1" contenteditable="true" onblur="saveTitle(this.id)">Pareto: Principais Setores de Ocorrência</h3>
+                    <input type="color" class="color-picker" id="c_p1" onchange="saveColor(this.id)">
+                </div>
+                <div class="chart-container"><canvas id="chartSetor"></canvas></div>
+            </div>
+            <div class="card card-pareto-def">
+                <div class="card-header">
+                    <h3 id="t_p2" contenteditable="true" onblur="saveTitle(this.id)">Pareto: Defeitos mais Frequentes (Top 10)</h3>
+                    <input type="color" class="color-picker" id="c_p2" onchange="saveColor(this.id)">
+                </div>
+                <div class="chart-container"><canvas id="chartDefeitos"></canvas></div>
+            </div>
+            <div class="card card-pareto-causa">
+                <div class="card-header">
+                    <h3 id="t_p3" contenteditable="true" onblur="saveTitle(this.id)">Pareto: Maiores Causadores</h3>
+                    <input type="color" class="color-picker" id="c_p3" onchange="saveColor(this.id)">
+                </div>
+                <div class="chart-container"><canvas id="chartCausadores"></canvas></div>
+            </div>
+            <div class="card card-custo-setor">
+                <div class="card-header">
+                    <h3 id="t_csetor" contenteditable="true" onblur="saveTitle(this.id)">Custo e Horas de Retrabalho por Setor</h3>
+                    <input type="color" class="color-picker" id="c_csetor" onchange="saveColor(this.id)">
+                </div>
+                <div class="chart-container"><canvas id="chartCustoSetor"></canvas></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Configurações Globais -->
+<div id="settingsModal" class="modal-bg">
+    <div class="modal-content">
+        <h2>Ajustes e Personalizações</h2>
+        
+        <h4 style="margin: 15px 0 10px; color: var(--text-muted); border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">Título do Dashboard</h4>
+        <div class="form-group">
+            <label>Fonte Principal:</label>
+            <select id="cfg_fontFamily">
+                <option value="'Inter', sans-serif">Inter</option>
+                <option value="'Roboto', sans-serif">Roboto</option>
+                <option value="'Montserrat', sans-serif">Montserrat</option>
+                <option value="'Oswald', sans-serif">Oswald</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="Georgia, serif">Georgia</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Tamanho da Fonte (px):</label>
+            <input type="number" id="cfg_fontSize" min="16" max="64" value="24">
+        </div>
+        <div class="form-group">
+            <label>Cor do Título:</label>
+            <input type="color" id="cfg_fontColor" value="#0056b3" style="width: 50px; padding: 0;">
+        </div>
+
+        <h4 style="margin: 20px 0 10px; color: var(--text-muted); border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">Aparência Base dos Rótulos de Dados</h4>
+        <div class="form-group">
+            <label>Casas Decimais:</label>
+            <input type="number" id="cfg_decimals" min="0" max="4" value="1">
+        </div>
+        <div class="form-group">
+            <label>Tamanho da Fonte (Rótulos):</label>
+            <input type="number" id="cfg_labelSize" min="8" max="24" value="10">
+        </div>
+        <div class="form-group" title="Define a posição base do rótulo em relação à barra/ponto">
+            <label>Âncora Inicial do Rótulo:</label>
+            <select id="cfg_labelAnchor">
+                <option value="end">Fim (Acima da barra)</option>
+                <option value="center">Centro</option>
+                <option value="start">Início (Base da barra)</option>
+            </select>
+        </div>
+        <div class="form-group" title="Define para onde o rótulo é empurrado">
+            <label>Alinhamento Automático:</label>
+            <select id="cfg_labelAlign">
+                <option value="top">Topo (Para cima)</option>
+                <option value="center">Centro</option>
+                <option value="bottom">Baixo (Para baixo)</option>
+                <option value="end">Direita</option>
+                <option value="start">Esquerda</option>
+            </select>
+        </div>
+        <p style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">*Dica: Você pode arrastar os números livremente com o mouse diretamente no gráfico.</p>
+        
+        <div class="modal-actions">
+            <button class="btn-custom" style="background: var(--text-muted);" onclick="closeSettingsModal()">CANCELAR</button>
+            <button class="btn-custom" onclick="applyAndSaveSettings()">SALVAR E APLICAR</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================
+    // Utils & Declarações Iniciais (Evita ReferenceError)
+    // ============================================
+    const costMap = { 3: 52.45714286, 4: 28.17698713, 5: 38.93312229, 6: 23.64481061, 7: 25.30869649, 8: 27.92763648, 9: 43.94403559, 10: 45.2540404, 11: 78.37000962, 12: 52.45714286 };
+    const setorNomes = { 1: "Recebimento", 2: "Insp. Recebimento", 3: "Inspeção Laser", 4: "Acabamento inicial", 5: "Calderaria", 6: "Soldagem", 7: "Decapagem", 8: "Acabamento Final", 9: "Área mecânica", 10: "Área elétrica", 11: "Teste Funcional", 12: "Área VFE", 13: "Pré-Expedição", 14: "Expedição", 15: "Engenharia", 16: "Compras / Aquisição", 17: "Estoque / Almoxarifado", 18: "Comercial" };
+    const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+    let globalData = [];
+    let currentTheme = 'light';
+    let chartInstances = {}; 
+    window.customLabelPos = {}; // Variável global para guardar as posições arrastadas
+
+    let sysCfg = {
+        fontFamily: "'Inter', sans-serif",
+        fontSize: 24,
+        fontColor: "#0056b3",
+        decimals: 1,
+        labelSize: 10,
+        labelAnchor: "end",
+        labelAlign: "top"
+    };
+
+    function groupAndSort(arr, key) {
+        let counts = {};
+        arr.forEach(d => {
+            let val = String(d[key]).trim();
+            if (val !== 'N/A' && val !== '0' && val !== 'null') { counts[val] = (counts[val] || 0) + 1; }
+        });
+        return Object.entries(counts).map(e => ({k: e[0], v: e[1]})).sort((a,b) => b.v - a.v);
+    }
+
+    function formatMonthStr(yyyy_mm) {
+        if (!yyyy_mm) return "Todos";
+        let parts = yyyy_mm.split('-');
+        if(parts.length !== 2) return yyyy_mm;
+        return monthNames[parseInt(parts[1])-1] + ' ' + parts[0];
+    }
+
+    function getThemeColor(varName) {
+        return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    }
+
+    // ============================================
+    // Gerenciamento de LocalStorage (Save/Load)
+    // ============================================
+    function loadSystemSettings() {
+        let saved = localStorage.getItem('nhs_sys_cfg');
+        if (saved) {
+            try { sysCfg = { ...sysCfg, ...JSON.parse(saved) }; } catch(e) {}
+        }
+        applyMainTitleStyle();
+    }
+    function applyAndSaveSettings() {
+        sysCfg.fontFamily = document.getElementById('cfg_fontFamily').value;
+        sysCfg.fontSize = parseInt(document.getElementById('cfg_fontSize').value) || 24;
+        sysCfg.fontColor = document.getElementById('cfg_fontColor').value;
+        sysCfg.decimals = parseInt(document.getElementById('cfg_decimals').value) || 0;
+        sysCfg.labelSize = parseInt(document.getElementById('cfg_labelSize').value) || 10;
+        sysCfg.labelAnchor = document.getElementById('cfg_labelAnchor').value;
+        sysCfg.labelAlign = document.getElementById('cfg_labelAlign').value;
+        
+        localStorage.setItem('nhs_sys_cfg', JSON.stringify(sysCfg));
+        closeSettingsModal();
+        applyMainTitleStyle();
+        renderDashboard(); 
+    }
+
+    function saveMainTitle() {
+        let el = document.getElementById('mainDashTitle');
+        if(el) localStorage.setItem('title_main', el.innerText);
+    }
+    function applyMainTitleStyle() {
+        let el = document.getElementById('mainDashTitle');
+        if(el) {
+            let savedText = localStorage.getItem('title_main');
+            if (savedText) el.innerText = savedText;
+            el.style.fontFamily = sysCfg.fontFamily;
+            el.style.fontSize = sysCfg.fontSize + "px";
+            el.style.color = sysCfg.fontColor;
+        }
+    }
+    function saveTitle(id) {
+        let el = document.getElementById(id);
+        if(el) localStorage.setItem('title_' + id, el.innerText);
+    }
+    function loadTitlesAndKPIs() {
+        document.querySelectorAll('.card-header h3').forEach(el => {
+            let saved = localStorage.getItem('title_' + el.id);
+            if(saved) el.innerText = saved;
+        });
+        document.querySelectorAll('.kpi span').forEach(el => {
+            let saved = localStorage.getItem('title_' + el.id);
+            if(saved) el.innerText = saved;
+        });
+    }
+
+    function saveColor(id) {
+        let el = document.getElementById(id);
+        if(el) {
+            localStorage.setItem('color_' + id, el.value);
+            renderDashboard(); 
+        }
+    }
+    function loadColors() {
+        document.querySelectorAll('.color-picker').forEach(el => {
+            let saved = localStorage.getItem('color_' + el.id);
+            if(saved) el.value = saved;
+            else el.value = getThemeColor('--chart-c1');
+        });
+    }
+    function getCustomColor(id, fallback) {
+        let saved = localStorage.getItem('color_' + id);
+        return saved ? saved : fallback;
+    }
+
+    function loadLabelPositions() {
+        let savedPos = localStorage.getItem('nhs_label_pos');
+        if (savedPos) {
+            try { window.customLabelPos = JSON.parse(savedPos); } catch(e) { window.customLabelPos = {}; }
+        } else {
+            window.customLabelPos = {};
+        }
+    }
+
+    // ============================================
+    // Interface e Leitura do Excel
+    // ============================================
+    function openSettingsModal() {
+        document.getElementById('cfg_fontFamily').value = sysCfg.fontFamily;
+        document.getElementById('cfg_fontSize').value = sysCfg.fontSize;
+        document.getElementById('cfg_fontColor').value = sysCfg.fontColor;
+        document.getElementById('cfg_decimals').value = sysCfg.decimals;
+        document.getElementById('cfg_labelSize').value = sysCfg.labelSize;
+        document.getElementById('cfg_labelAnchor').value = sysCfg.labelAnchor;
+        document.getElementById('cfg_labelAlign').value = sysCfg.labelAlign;
+        document.getElementById('settingsModal').style.display = 'flex';
+    }
+    function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
+
+    function openTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+    function toggleTheme() {
+        currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        renderDashboard();
+    }
+    function clearData() {
+        if(confirm("ATENÇÃO: Deseja apagar todos os dados da planilha e suas posições personalizadas?")) {
+            localStorage.clear();
+            globalData = [];
+            window.customLabelPos = {}; 
+            document.getElementById('monthFilter').innerHTML = '<option value="ALL">Todos os Meses</option>';
+            window.location.reload();
+        }
+    }
+
+    document.getElementById('excelUpload').addEventListener('change', function(e) {
+        let file = e.target.files[0];
+        if(!file) return;
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        
+        let reader = new FileReader();
+        reader.onload = function(evt) {
+            try {
+                let data = new Uint8Array(evt.target.result);
+                let workbook = XLSX.read(data, {type: 'array', cellDates: true});
+                let sheetName = workbook.SheetNames.find(n => n.toUpperCase() === "PLANILHA") || workbook.SheetNames[0];
+                let sheet = workbook.Sheets[sheetName];
+                
+                let rawJson = XLSX.utils.sheet_to_json(sheet, { header: "A", defval: null, range: 2 });
+                let parsedData = [];
+                
+                let knownCosts = Object.values(costMap);
+                let avgCost = knownCosts.reduce((a,b)=>a+b, 0) / knownCosts.length;
+
+                rawJson.forEach(row => {
+                    let dateVal = row['B'];
+                    if (!dateVal) return;
+                    
+                    let dateObj;
+                    if (dateVal instanceof Date) dateObj = dateVal;
+                    else if (typeof dateVal === 'number') dateObj = new Date(Math.round((dateVal - 25569) * 86400 * 1000));
+                    else dateObj = new Date(dateVal);
+                    
+                    if (isNaN(dateObj)) return;
+                    let monthStr = dateObj.getFullYear() + "-" + String(dateObj.getMonth() + 1).padStart(2, '0');
+                    
+                    let timeRaw = row['Q'];
+                    let horas = 0;
+                    let timeNum = parseFloat(timeRaw);
+                    if (!isNaN(timeNum)) {
+                        let h = Math.floor(timeNum);
+                        let m = Math.round((timeNum - h) * 100);
+                        horas = h + (m / 60);
+                    } else if (timeRaw instanceof Date) { horas = 24; }
+                    
+                    let zVal = parseInt(row['Z']);
+                    let rate = costMap[zVal];
+                    if (rate === undefined || rate === 0 || isNaN(rate)) rate = avgCost; 
+                    
+                    let custo = horas * rate;
+                    let setorNome = setorNomes[zVal] || String(row['Z'] || 'N/A');
+
+                    parsedData.push({
+                        month: monthStr, rnc: row['A'] || 'N/A', maquina: row['D'] ? String(row['D']).trim() : 'N/A',
+                        modelo: row['E'] || 'N/A', corr_prot: row['F'] || 'N/A', qtd_apontada: parseFloat(row['J']) || 0,
+                        aprovada: parseFloat(row['K']) || 0, recuperada: parseFloat(row['L']) || 0, rejeitada: parseFloat(row['O']) || 0,
+                        local: row['P'] || 'N/A', horas: horas, custo: custo, setor: setorNome, defeito: row['AB'] || 'N/A',
+                        causa: row['AD'] || 'N/A', score: parseFloat(row['AK']) || 0, serie: row['S'] || 'N/A', lote: row['T'] || 'N/A'
+                    });
+                });
+                
+                globalData = parsedData;
+                localStorage.setItem('nhs_rnc_data', JSON.stringify(globalData));
+                updateFiltersAndRender();
+            } catch(err) {
+                alert("Erro ao processar a planilha: " + err);
+            }
+            document.getElementById('loadingOverlay').style.display = 'none';
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    document.getElementById('monthFilter').addEventListener('change', renderDashboard);
+
+    function initApp() {
+        loadSystemSettings();
+        loadTitlesAndKPIs();
+        loadColors();
+        loadLabelPositions();
+        
+        let stored = localStorage.getItem('nhs_rnc_data');
+        if (stored) {
+            globalData = JSON.parse(stored);
+            updateFiltersAndRender();
+        }
+        Chart.register(ChartDataLabels); 
+    }
+
+    function updateFiltersAndRender() {
+        let months = [...new Set(globalData.map(d => d.month))].sort();
+        let select = document.getElementById('monthFilter');
+        let currentSelection = select.value;
+        select.innerHTML = '<option value="ALL">Todos os Meses</option>';
+        months.forEach(m => {
+            let opt = document.createElement('option');
+            opt.value = m;
+            opt.innerText = formatMonthStr(m);
+            if(m === currentSelection) opt.selected = true;
+            select.appendChild(opt);
+        });
+        renderDashboard();
+    }
+
+    // ============================================
+    // Criação dos Gráficos c/ Drag and Drop Labels
+    // ============================================
+    function createChart(ctxId, type, data, options) {
+        let ctx = document.getElementById(ctxId);
+        if(!ctx) return;
+        
+        if (chartInstances[ctxId]) chartInstances[ctxId].destroy();
+        
+        let chart = new Chart(ctx, {
+            type: type,
+            data: data,
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { 
+                    legend: { position: 'top', labels: { color: getThemeColor('--text-main') } }
+                }, 
+                ...options 
+            }
+        });
+        chartInstances[ctxId] = chart;
+
+        // --- SISTEMA DE ARRASTAR RÓTULOS (Drag & Drop) ---
+        ctx.onmousedown = function(e) {
+            const points = chart.getElementsAtEventForMode(e, 'nearest', { intersect: false }, true);
+            if (points.length) {
+                chart._draggingPoint = points[0];
+                ctx.style.cursor = 'grabbing';
+            }
+        };
+        
+        ctx.onmousemove = function(e) {
+            if (chart._draggingPoint) {
+                const point = chart._draggingPoint;
+                const meta = chart.getDatasetMeta(point.datasetIndex);
+                const el = meta.data[point.index];
+                
+                let pointX = el.x;
+                let pointY = el.y;
+                if (el.tooltipPosition) {
+                    const pos = el.tooltipPosition();
+                    pointX = pos.x; pointY = pos.y;
+                }
+                
+                const dx = e.offsetX - pointX;
+                const dy = e.offsetY - pointY;
+                let distance = Math.sqrt(dx*dx + dy*dy);
+                let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                
+                if (!window.customLabelPos) window.customLabelPos = {};
+                if (!window.customLabelPos[ctxId]) window.customLabelPos[ctxId] = {};
+                if (!window.customLabelPos[ctxId][point.datasetIndex]) window.customLabelPos[ctxId][point.datasetIndex] = {};
+                
+                window.customLabelPos[ctxId][point.datasetIndex][point.index] = { align: angle, offset: distance };
+                chart.update('none'); 
+            } else {
+                const points = chart.getElementsAtEventForMode(e, 'nearest', { intersect: false }, true);
+                ctx.style.cursor = points.length ? 'grab' : 'default';
+            }
+        };
+        
+        ctx.onmouseup = function(e) { 
+            if (chart._draggingPoint) localStorage.setItem('nhs_label_pos', JSON.stringify(window.customLabelPos));
+            chart._draggingPoint = null; 
+            ctx.style.cursor = 'default'; 
+        };
+        ctx.onmouseleave = function(e) { 
+            if (chart._draggingPoint) localStorage.setItem('nhs_label_pos', JSON.stringify(window.customLabelPos));
+            chart._draggingPoint = null; 
+            ctx.style.cursor = 'default'; 
+        };
+    }
+
+    // ============================================
+    // Renderização dos Dados no Dashboard
+    // ============================================
+    function renderDashboard() {
+        let selMonth = document.getElementById('monthFilter').value;
+        let dataToUse = selMonth === 'ALL' ? globalData : globalData.filter(d => d.month === selMonth);
+        
+        if(dataToUse.length === 0) {
+            document.getElementById('kpiRnc').innerText = "0"; document.getElementById('kpiQtd').innerText = "0";
+            document.getElementById('kpiHrs').innerText = "0h"; document.getElementById('kpiCusto').innerText = "R$ 0";
+            return;
+        }
+
+        Chart.defaults.color = getThemeColor('--text-muted');
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.scale.grid.color = getThemeColor('--grid-line');
+        
+        // Configuração Datalabels (Com Injeção do Drag&Drop)
+        Chart.defaults.plugins.datalabels = {
+            color: getThemeColor('--text-main'),
+            font: { weight: 'bold', size: sysCfg.labelSize, family: "'Inter', sans-serif" },
+            display: true,       
+            clamp: true,         
+            clip: false,
+            anchor: function(context) {
+                const chartId = context.chart.canvas.id;
+                if (window.customLabelPos?.[chartId]?.[context.datasetIndex]?.[context.dataIndex]) return 'center'; 
+                return sysCfg.labelAnchor;
+            },
+            align: function(context) {
+                const chartId = context.chart.canvas.id;
+                if (window.customLabelPos?.[chartId]?.[context.datasetIndex]?.[context.dataIndex]) {
+                    return window.customLabelPos[chartId][context.datasetIndex][context.dataIndex].align;
+                }
+                return sysCfg.labelAlign;
+            },
+            offset: function(context) {
+                const chartId = context.chart.canvas.id;
+                if (window.customLabelPos?.[chartId]?.[context.datasetIndex]?.[context.dataIndex]) {
+                    return window.customLabelPos[chartId][context.datasetIndex][context.dataIndex].offset;
+                }
+                return 4;
+            },
+            formatter: function(value) {
+                if (value === 0 || value === 0.0) return '';
+                if (Number.isInteger(value) && sysCfg.decimals === 0) return value;
+                return parseFloat(value).toFixed(sysCfg.decimals);
+            }
+        };
+
+        let cVermelhoRNC = getThemeColor('--vermelho-rnc'); let cMarrom = getThemeColor('--marrom-recup'); 
+        let c2 = getThemeColor('--chart-c2'), c3 = getThemeColor('--chart-c3'), c4 = getThemeColor('--chart-c4'), c5 = getThemeColor('--chart-c5'), c6 = getThemeColor('--chart-c6');
+
+        let monthsKey = selMonth === 'ALL' ? [...new Set(globalData.map(d => d.month))].sort() : [selMonth];
+        let monthsLabels = monthsKey.map(m => formatMonthStr(m));
+        
+        let totalRNCsRows = dataToUse.length; 
+        let totalQtd = dataToUse.reduce((s, d) => s + d.qtd_apontada, 0);
+        let totalHrs = dataToUse.reduce((s, d) => s + d.horas, 0);
+        let totalCusto = dataToUse.reduce((s, d) => s + d.custo, 0);
+
+        document.getElementById('kpiRnc').innerText = totalRNCsRows;
+        document.getElementById('kpiQtd').innerText = totalQtd;
+        document.getElementById('kpiHrs').innerText = totalHrs.toFixed(sysCfg.decimals) + 'h';
+        document.getElementById('kpiCusto').innerText = 'R$ ' + totalCusto.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+        let rncByMonth = monthsKey.map(m => dataToUse.filter(d => d.month === m && d.rnc !== 'N/A').length);
+        let qtdByMonth = monthsKey.map(m => dataToUse.filter(d => d.month === m).reduce((s, d) => s + d.qtd_apontada, 0));
+        let hrsByMonth = monthsKey.map(m => dataToUse.filter(d => d.month === m).reduce((s, d) => s + d.horas, 0));
+        let custoByMonth = monthsKey.map(m => dataToUse.filter(d => d.month === m).reduce((s, d) => s + d.custo, 0));
+
+        let accHrs = [], accCusto = [], hT = 0, cT = 0;
+        for(let i=0; i<monthsKey.length; i++) { hT += hrsByMonth[i]; cT += custoByMonth[i]; accHrs.push(hT); accCusto.push(cT); }
+
+        createChart('chartRnc', 'bar', {
+            labels: monthsLabels, datasets: [{ label: 'RNCs Abertas', data: rncByMonth, backgroundColor: getCustomColor('c_rnc', cVermelhoRNC), borderRadius: 4 }]
+        });
+        
+        createChart('chartComp', 'line', {
+            labels: monthsLabels,
+            datasets: [
+                { label: 'Qtd RNCs', data: rncByMonth, borderColor: cVermelhoRNC, backgroundColor: cVermelhoRNC, tension: 0.3, borderWidth: 3 },
+                { label: 'Qtd Apontada (Peças)', data: qtdByMonth, borderColor: getCustomColor('c_comp', c2), backgroundColor: getCustomColor('c_comp', c2), tension: 0.3, borderWidth: 3 }
+            ]
+        });
+
+        createChart('chartCustos', 'bar', {
+            labels: monthsLabels,
+            datasets: [
+                { label: 'Horas Gastas', data: hrsByMonth, backgroundColor: cMarrom, borderRadius: 4, yAxisID: 'y' },
+                { label: 'Custo R$', data: custoByMonth, backgroundColor: getCustomColor('c_horas', c2), borderRadius: 4, yAxisID: 'y1' },
+                { label: 'Acumulado Horas', data: accHrs, type: 'line', borderColor: cMarrom, borderDash: [5,5], tension: 0.3, pointBackgroundColor: cMarrom, yAxisID: 'y', datalabels: { display: false } },
+                { label: 'Acumulado Custo', data: accCusto, type: 'line', borderColor: getCustomColor('c_horas', c2), tension: 0.3, pointBackgroundColor: getCustomColor('c_horas', c2), yAxisID: 'y1', datalabels: { display: false } }
+            ]
+        }, { scales: { y: { type: 'linear', position: 'left', title: {display: true, text: 'Horas'} }, y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: {display: true, text: 'Custo R$'} } } });
+
+        let aprovByMonth = monthsKey.map(m => dataToUse.filter(d => d.month === m).reduce((s, d) => s + d.aprovada, 0));
+        let recByMonth = monthsKey.map(m => dataToUse.filter(d => d.month === m).reduce((s, d) => s + d.recuperada, 0));
+        let rejByMonth = monthsKey.map(m => dataToUse.filter(d => d.month === m).reduce((s, d) => s + d.rejeitada, 0));
+        let acTotal = [], rTotal = 0;
+        for(let i=0; i<monthsKey.length; i++) { rTotal += (aprovByMonth[i] + recByMonth[i] + rejByMonth[i]); acTotal.push(rTotal); }
+
+        createChart('chartPecas', 'bar', {
+            labels: monthsLabels,
+            datasets: [
+                { label: 'Acumulado Total', data: acTotal, type: 'line', borderColor: getCustomColor('c_pecas', c6), borderWidth: 3, tension: 0.3, pointRadius: 4, yAxisID: 'y1', datalabels: {display: false} },
+                { label: 'Aprovadas', data: aprovByMonth, backgroundColor: c3, stacked: true },
+                { label: 'Recuperadas', data: recByMonth, backgroundColor: cMarrom, stacked: true },
+                { label: 'Rejeitadas', data: rejByMonth, backgroundColor: c5, stacked: true }
+            ]
+        }, { scales: { x: { stacked: true }, y: { stacked: true, position: 'left' }, y1: { position: 'right', grid: { drawOnChartArea: false } } } });
+
+        let localData = groupAndSort(dataToUse, 'local');
+        createChart('chartLocal', 'polarArea', { labels: localData.map(d => d.k), datasets: [{ data: localData.map(d => d.v), backgroundColor: [getCustomColor('c_loc1', c2), c4, c6] }] });
+
+        let intData = monthsKey.map(m => dataToUse.filter(d => d.month === m && String(d.local).toUpperCase() === 'INTERNO').length);
+        let extData = monthsKey.map(m => dataToUse.filter(d => d.month === m && String(d.local).toUpperCase() === 'EXTERNO').length);
+        createChart('chartLocalBar', 'bar', { labels: monthsLabels, datasets: [ { label: 'Interno', data: intData, backgroundColor: getCustomColor('c_loc2', c2) }, { label: 'Externo', data: extData, backgroundColor: c4 } ] });
+
+        let maqData = groupAndSort(dataToUse, 'maquina').slice(0, 10);
+        createChart('chartMaquinas', 'bar', { labels: maqData.map(d => d.k), datasets: [{ label: 'Apontamentos', data: maqData.map(d => d.v), backgroundColor: getCustomColor('c_maq', c2), borderRadius: 4 }] });
+
+        let modData = groupAndSort(dataToUse, 'modelo').slice(0, 10);
+        createChart('chartModelos', 'bar', { labels: modData.map(d => d.k), datasets: [{ label: 'Modelos', data: modData.map(d => d.v), backgroundColor: getCustomColor('c_mod', c6), borderRadius: 4 }] }, { indexAxis: 'y' });
+
+        let corrData = groupAndSort(dataToUse, 'corr_prot');
+        createChart('chartCorr', 'pie', { 
+            labels: corrData.map(d => d.k), 
+            datasets: [{ data: corrData.map(d => d.v), backgroundColor: [getCustomColor('c_corr', c2), c4] }] 
+        }, { plugins: { datalabels: { color: '#fff', formatter: (v, ctx) => (v * 100 / ctx.chart._metasets[ctx.datasetIndex].total).toFixed(sysCfg.decimals) + '%' } } });
+
+        let distSeries = monthsKey.map(m => new Set(dataToUse.filter(d => d.month === m && d.serie !== 'N/A').map(d => d.serie)).size);
+        let totalSeries = monthsKey.map(m => dataToUse.filter(d => d.month === m && d.serie !== 'N/A').length);
+        let repSeries = totalSeries.map((t, i) => t - distSeries[i]);
+        let c_ser = getCustomColor('c_ser', c2);
+        
+        createChart('chartSerie', 'line', {
+            labels: monthsLabels,
+            datasets: [
+                { label: 'Séries Únicas', data: distSeries, borderColor: c_ser, backgroundColor: c_ser + '40', fill: true, tension: 0.4 },
+                { label: 'Séries Repetidas', data: repSeries, borderColor: c5, backgroundColor: 'transparent', tension: 0.4, borderDash: [5, 5] }
+            ]
+        }, { plugins: { datalabels: { display: false }, tooltip: { callbacks: { label: function(ctx) { let mIdx = ctx.dataIndex; if(ctx.datasetIndex === 0) return `Únicas: ${distSeries[mIdx]} | Repetidas: ${repSeries[mIdx]} | Total Lidas: ${totalSeries[mIdx]}`; return null; } } } } });
+
+        let loteData = groupAndSort(dataToUse, 'lote').slice(0, 5);
+        createChart('chartLote', 'bar', { labels: loteData.map(d => d.k), datasets: [{ label: 'Qtd Lotes', data: loteData.map(d => d.v), backgroundColor: getCustomColor('c_lote', c2), borderRadius: 4 }] }, { indexAxis: 'y' });
+
+        function buildPareto(ctxId, field, colorId, defaultCol, isTop10=false) {
+            let pData = groupAndSort(dataToUse, field);
+            if(isTop10) pData = pData.slice(0, 10); 
+            let labels = pData.map(d => d.k.substring(0, 25));
+            let vals = pData.map(d => d.v);
+            let total = vals.reduce((a,b) => a+b, 0);
+            let accum = [], curr = 0;
+            vals.forEach(v => { curr += v; accum.push((curr/total)*100); });
+            
+            createChart(ctxId, 'bar', {
+                labels: labels,
+                datasets: [
+                    { label: '% Pareto', data: accum, type: 'line', borderColor: c4, borderWidth: 3, pointBackgroundColor: c4, yAxisID: 'y1', datalabels: { formatter: v => v.toFixed(sysCfg.decimals) + '%' } },
+                    { label: 'Ocorrências', data: vals, backgroundColor: getCustomColor(colorId, defaultCol), borderRadius: 4, yAxisID: 'y' }
+                ]
+            }, { scales: { y: { position: 'left' }, y1: { position: 'right', max: 100, ticks: { callback: v => v + '%' }, grid: { drawOnChartArea: false } } } });
+        }
+        
+        buildPareto('chartSetor', 'setor', 'c_p1', c2);
+        buildPareto('chartDefeitos', 'defeito', 'c_p2', c6, true); 
+        buildPareto('chartCausadores', 'causa', 'c_p3', c2);
+
+        let setoresSet = new Set(dataToUse.map(d => d.setor).filter(s => s !== 'N/A'));
+        let arrSetorCusto = Array.from(setoresSet).map(s => {
+            let rows = dataToUse.filter(d => d.setor === s);
+            let h = rows.reduce((acc, row) => acc + row.horas, 0);
+            let c = rows.reduce((acc, row) => acc + row.custo, 0);
+            return { setor: s.substring(0,20), horas: h, custo: c };
+        }).filter(item => item.horas > 0 || item.custo > 0).sort((a,b) => b.custo - a.custo); 
+
+        createChart('chartCustoSetor', 'bar', {
+            labels: arrSetorCusto.map(s => s.setor),
+            datasets: [
+                { label: 'Custo Financeiro (R$)', data: arrSetorCusto.map(s => s.custo), backgroundColor: getCustomColor('c_csetor', c2), borderRadius: 4, yAxisID: 'y' },
+                { label: 'Horas Retrabalhadas', data: arrSetorCusto.map(s => s.horas), backgroundColor: cMarrom, borderRadius: 4, yAxisID: 'y1' }
+            ]
+        }, { scales: { x: { ticks: { maxRotation: 45, minRotation: 45 } }, y: { type: 'linear', position: 'left', title:{display:true, text:'Custo R$'} }, y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title:{display:true, text:'Horas'} } } });
+    }
+
+    window.onload = initApp;
+</script>
+</body>
+</html>
